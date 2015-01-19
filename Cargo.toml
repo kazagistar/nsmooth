@@ -1,0 +1,11 @@
+[package]
+
+name = "nsmooth"
+version = "0.0.1"
+authors = ["Jakub Gedeon <kazagistar@gmail.com>"]
+
+
+[dependencies]
+
+num = "*"
+slow_primes = "*"
