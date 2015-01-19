@@ -1,46 +1,90 @@
+#![feature(box_syntax)]
+
 use std::cmp::Ordering;
+use std::num::Int;
 use std::collections::BinaryHeap;
+use std::num::NumCast;
 
 #[derive(Copy, Eq, PartialEq)]
-struct Composite <'a> {
-    product : u64,
-    successors : &'a [u64],
+struct Composite <I : Int> {
+    product : I,
+    cutoff: usize,
 }
 
-impl <'a> Ord for Composite<'a> {
-    fn cmp(&self, other: &Composite) -> Ordering {
+impl <I: Int> Ord for Composite<I> {
+    fn cmp(&self, other: &Composite<I>) -> Ordering {
         other.product.cmp(&self.product)
     }
 }
 
-impl <'a> PartialOrd for Composite<'a> {
-    fn partial_cmp(&self, other: &Composite) -> Option<Ordering> {
+impl <I: Int> PartialOrd for Composite<I> {
+    fn partial_cmp(&self, other: &Composite<I>) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-fn main() {
-    // Primes in reverse order is about 20% faster
-    // This is because the "small and frequent" primes are near the "branches" of the "tree"
-    //let legal_primes = [2,3,5,7,11,13,17,19];
-    let legal_primes = [19,17,13,11,7,5,3,2];
-    let mut heap = BinaryHeap::new();
-    
-    heap.push(Composite { product: 1, successors: &legal_primes });
-    
-    for _ in 1..10000000 {
-        let x = heap.pop().expect("Error: Number of products was finite?!?");
+
+struct NSmooth <I : Int> {
+    lookahead : BinaryHeap<Composite<I>>,
+    factors : Box<[I]>,
+}
+
+fn nsmooth<I : Int>(n : usize) -> NSmooth<I> {
+    // for now, we ignore n, until I actually get a prime generator
+    let mut ns = NSmooth {
+        factors: primes(n).into_boxed_slice(),
+        lookahead: BinaryHeap::new(),
+    };
+    ns.lookahead.push(Composite { product: <I as Int>::one(), cutoff: 0 });
+    return ns;
+}
+
+impl <I : Int> Iterator for NSmooth<I> {
+    type Item = I;
+
+    fn next(&mut self) -> Option<I> {
+        let prev = self.lookahead.pop().expect("Error: Number of products was finite?!?");
         
-        for (index, &prime) in x.successors.iter().enumerate() {
-            let new = Composite {
-                product: x.product * prime,
-                successors: &x.successors[index..],
-            };
-            heap.push(new);
+        let prime = self.factors[prev.cutoff];
+        // Push first child
+        self.lookahead.push(Composite {
+            product: prev.product * prime,
+            cutoff: prev.cutoff,
+        });
+      
+        // Push brother
+        let brother_cutoff = prev.cutoff + 1;
+        if brother_cutoff < self.factors.len() && prev.product != <I as Int>::one() {
+            let brother_prime = self.factors[brother_cutoff];
+            self.lookahead.push(Composite {
+                product: prev.product / prime * brother_prime,
+                cutoff: prev.cutoff + 1,
+            });
         }
+        return Some(prev.product);
     }
-    
-    let last = heap.pop().expect("Error: Number of products was finite?!?");
-    
-    println!("The millionth number not divisible by primes bigger then 20 is {}.", last.product);
+}
+
+
+// Simple and slow prime finder
+// generic numbers in rust are wierd and add a lot of boilerplate :(
+fn primes <I: Int>(n : usize) -> Vec<I> {
+    let mut primes = vec![];
+    let one: I = Int::one();
+    let mut candidate: I = one + one;
+    loop {
+        if !primes.iter().any(|&x| candidate % x == <I as Int>::zero()) {
+           primes.push(candidate)
+        }
+        if primes.len() == n {
+            return primes;
+        }
+        candidate = candidate + one;
+    }
+}
+
+
+fn main() {
+    let x: u64 = nsmooth(8).nth(9999999).expect("");
+    println!("{}", x);
 }
