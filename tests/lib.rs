@@ -7,10 +7,9 @@ extern crate slow_primes;
 // Test up to a million
 #[test]
 fn strictly_monotonically_increasing() {
-    let mut prev: u64 = 0;
-    for now in nsmooth::nsmooth(20).take(1000000) {
-        let now1: u64 = now;
-        assert!(now1 > prev);
+    let mut prev = 0;
+    for now in nsmooth::nsmooth::<u64>(20).take(1000000) {
+        assert!(now > prev);
         prev = now;
     }
 }
