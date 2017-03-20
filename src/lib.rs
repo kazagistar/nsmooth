@@ -1,5 +1,3 @@
-#![feature(box_syntax)]
-
 extern crate slow_primes;
 extern crate num;
 
@@ -33,8 +31,10 @@ pub struct NSmooth <I : Integer + Ord> {
 }
 
 pub fn nsmooth<I : Integer + Ord + FromPrimitive>(n : usize) -> NSmooth<I> {
-    let sieve = slow_primes::Primes::sieve(n);
-    let primes: Vec<I> = sieve.primes().map(|x| <I as FromPrimitive>::from_usize(x).expect("Overflow while generating primes")).collect();
+    let primes: Vec<_> = slow_primes::Primes::sieve(n + 1).primes()
+        .take_while(|x| x <= &n)
+        .map(|x| <I as FromPrimitive>::from_usize(x).expect("Overflow while generating primes"))
+        .collect();
 
     // for now, we ignore n, until I actually get a prime generator
     let mut ns = NSmooth {
