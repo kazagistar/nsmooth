@@ -7,11 +7,9 @@ use std::cmp::Ordering;
 use num::integer::Integer;
 use num::traits::One;
 use std::collections::BinaryHeap;
-use std::num::NumCast;
-use std::num::FromPrimitive;
+use num::FromPrimitive;
 
-
-#[derive(Copy, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 struct Composite <I : Integer + Ord> {
     product : I,
     cutoff: usize,
@@ -29,7 +27,6 @@ impl <I: Integer + Ord> PartialOrd for Composite<I> {
     }
 }
 
-
 pub struct NSmooth <I : Integer + Ord> {
     lookahead : BinaryHeap<Composite<I>>,
     factors : Box<[I]>,
@@ -37,7 +34,7 @@ pub struct NSmooth <I : Integer + Ord> {
 
 pub fn nsmooth<I : Integer + Ord + FromPrimitive>(n : usize) -> NSmooth<I> {
     let sieve = slow_primes::Primes::sieve(n);
-    let primes: Vec<I> = sieve.primes().map(|x| <I as FromPrimitive>::from_uint(x).expect("Overflow while generating primes")).collect();
+    let primes: Vec<I> = sieve.primes().map(|x| <I as FromPrimitive>::from_usize(x).expect("Overflow while generating primes")).collect();
 
     // for now, we ignore n, until I actually get a prime generator
     let mut ns = NSmooth {
@@ -53,14 +50,14 @@ impl <I : Integer + Ord + Clone> Iterator for NSmooth<I> {
 
     fn next(&mut self) -> Option<I> {
         let prev = self.lookahead.pop().expect("Error: Number of products was finite?!?");
-        
+
         let prime = self.factors[prev.cutoff].clone();
         // Push first child
         self.lookahead.push(Composite {
             product: prev.product.clone() * prime.clone(),
             cutoff: prev.cutoff,
         });
-      
+
         // Push brother
         let brother_cutoff = prev.cutoff + 1;
         if brother_cutoff < self.factors.len() && prev.product != <I as One>::one() {
